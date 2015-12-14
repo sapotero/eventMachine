@@ -1,0 +1,20 @@
+{
+  "name": "eventMachine",
+  "description": "event machine for node",
+  "main": "index.js",
+  "authors": [
+    "Sapotero"
+  ],
+  "license": "ISC",
+  "homepage": "https://github.com/sapotero/eventMachine",
+  "moduleType": [
+    "node"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
