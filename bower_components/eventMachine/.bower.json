@@ -1,0 +1,31 @@
+{
+  "name": "eventMachine",
+  "description": "event machine for node",
+  "main": "index.js",
+  "authors": [
+    "Sapotero"
+  ],
+  "license": "ISC",
+  "homepage": "https://github.com/sapotero/eventMachine",
+  "moduleType": [
+    "node"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "version": "0.0.1",
+  "_release": "0.0.1",
+  "_resolution": {
+    "type": "version",
+    "tag": "v0.0.1",
+    "commit": "f84fb7603df95b78def271e7beaf3d7b5e31c3e4"
+  },
+  "_source": "git://github.com/sapotero/eventMachine.git",
+  "_target": "~0.0.1",
+  "_originalSource": "eventumMachinius",
+  "_direct": true
+}
