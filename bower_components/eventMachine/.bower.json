@@ -17,15 +17,14 @@
     "test",
     "tests"
   ],
-  "version": "0.0.1",
-  "_release": "0.0.1",
+  "version": "0.0.2",
+  "_release": "0.0.2",
   "_resolution": {
     "type": "version",
-    "tag": "v0.0.1",
-    "commit": "f84fb7603df95b78def271e7beaf3d7b5e31c3e4"
+    "tag": "0.0.2",
+    "commit": "66c7121b0d3ba323c548fae05e92e71de3f12b3b"
   },
   "_source": "git://github.com/sapotero/eventMachine.git",
-  "_target": "~0.0.1",
-  "_originalSource": "eventumMachinius",
-  "_direct": true
+  "_target": "~0.0.2",
+  "_originalSource": "eventumMachinius"
 }
