@@ -1,132 +1,292 @@
-"use strict";
-var eventum = eventum || {};
+(function () {
+  var eventum = {
 
-eventum = function(config){
-  var EventumCurrentState = '',
-      EventumCurrentEvent = '',
-      EventumConfig = {},
-      EventumEvents = [],
-      EventumCallbacks;
-  
-  this.findEvent = function(){
-    console.log('findEvent: ...', EventumCurrentState);
+    Result: {
+      SUCCEEDED    : 1,
+      NOTRANSITION : 2,
+      CANCELLED    : 3,
+      PENDING      : 4 
+    },
 
-    for (var a = 0; a < EventumConfig.events.length; a++) {
-      var event = EventumConfig.events[a]
-      console.log('*name', event);
+    Error: {
+      INVALID : 1,
+      PENDING : 2,
+      INVALID : 4 
+    },
 
-      if (event.from === EventumCurrentState){
-        EventumCurrentEvent = event.name;
-        console.log( '  -> CurrentEvent', EventumCurrentEvent, EventumCurrentState );
-        break;
+    ANY   : '*',
+    ASYNC : 'async',
+    DEBUG : false,
+
+    //---------------------------------------------------------------------------
+
+    init: function( config, machine ) {
+
+      var initial      = {},
+          terminal     = config.terminal  || config['final'],
+          eventMachine = machine          || config.machine  || {},
+          events       = config.events    || [],
+          callbacks    = config.callbacks || {},
+          map          = {},
+          next         = {};
+
+      if ( typeof config.initial == 'string' ) {
+        initial = { state: config.initial };
+      } else {
+        initial = config.initial
       };
-    };
-    // EventumCallbacks['on'+state].call( this, EventumCurrentEvent, EventumConfig[state].from, EventumConfig[state].to, {data: 123} )
-  };
 
-  this.next = function(){
-    // console.log('next: ', EventumCurrentState, EventumCurrentEvent)
-    for (var i = 0; i < EventumEvents.length; i++) {
-      var event = EventumEvents[i];
 
-      if (event.name === EventumCurrentEvent && event.from === EventumCurrentState) {
-        // EventumCurrentState = event.to;
-        // EventumCurrentEvent = event.name;
-        var _next = event.to;
+      var add = function(e) {
+        var from = (e.from instanceof Array) ? e.from : (e.from ? [e.from] : [eventum.ANY]);
+        map[e.event] = map[e.event] || {};
+        for (var n = 0 ; n < from.length ; n++) {
+          next[from[n]] = next[from[n]] || [];
+          next[from[n]].push(e.event);
 
-        for (var z = 0; z < EventumEvents.length; z++) {
-          var event = EventumEvents[z];
-          if (event.from === _next) {
-            console.log(' | to ->>', event);
-            break;
-          }
+          map[e.event][from[n]] = e.to || from[n]; // allow no-op transition if 'to' is not specified
+        };
+      };
+
+      if (initial) {
+        initial.event = initial.event || 'startup';
+        add({ event: initial.event, from: 'none', to: initial.state });
+      };
+
+      for(var n = 0 ; n < events.length ; n++){
+        add(events[n]);
+      };
+
+      for(var event in map) {
+        if (map.hasOwnProperty(event)){
+          eventMachine[event] = eventum.buildEvent(event, map[event]);
+        };
+      };
+
+      for(var event in callbacks) {
+        if (callbacks.hasOwnProperty(event)){
+          eventMachine[event] = callbacks[event];
+        };
+      };
+
+      eventMachine.current = 'none';
+      eventMachine.is = function(state) {
+        return ( state instanceof Array ) ? ( state.indexOf(this.current) >= 0 ) : (this.current === state);
+      };
+      eventMachine.can = function(event) {
+        return !this.transition && ( map[event].hasOwnProperty(this.current ) || map[event].hasOwnProperty( eventum.ANY ));
+      }
+      eventMachine.cannot = function(event) {
+        return !this.can(event);
+      };
+      eventMachine.next = function() {
+        return next[this.current];
+      };
+      eventMachine.Finished = function() {
+        return this.is(terminal);
+      };
+
+      eventMachine.debug = function(debug) {
+        return eventum.debug(debug);
+      };
+
+      eventMachine.error = config.error || function( event, from, to, args, error, msg, e ) {
+        throw e || msg;
+      };
+
+      if (initial && !initial.defer){
+        eventMachine[initial.event]();
+      }
+
+      return eventMachine;
+
+    },
+
+
+    callback: function(eventMachine, func, event, from, to, args) {
+      if (func) {
+        try {
+          return func.apply(eventMachine, [event, from, to].concat(args));
+        }
+        catch(e) {
+          return eventMachine.error(event, from, to, args, eventum.Error.INVALID, "an exception occurred in a caller-provided callback function", e);
+        }
+      } else {
+        console.log( 'not a function', func )
+        return false
+      }
+    },
+
+    beforeAnyEvent:  function(eventMachine, event, from, to, args) {
+      if ( eventum.DEBUG ){
+        console.log('beforeAnyEvent', event);
+      };
+      return eventum.callback(eventMachine, eventMachine['onbeforeevent'], event, from, to, args);
+    },
+    
+    afterAnyEvent:   function(eventMachine, event, from, to, args) {
+      if ( eventum.DEBUG ){
+        console.log('afterAnyEvent', event);
+      };
+      return eventum.callback(eventMachine, eventMachine['onafterevent'] || eventMachine['onevent'], event, from, to, args);
+    },
+    
+    leaveAnyState:   function(eventMachine, event, from, to, args) {
+      if ( eventum.DEBUG ){
+        console.log('leaveAnyState', event);
+      };
+      return eventum.callback(eventMachine, eventMachine['onleavestate'], event, from, to, args);
+    },
+    
+    enterAnyState:   function(eventMachine, event, from, to, args) {
+      if ( eventum.DEBUG ){
+        console.log('enterAnyState', event);
+      };
+      return eventum.callback(eventMachine, eventMachine['onenterstate'] || eventMachine['onstate'], event, from, to, args);
+    },
+    
+    changeState:     function(eventMachine, event, from, to, args) {
+      if ( eventum.DEBUG ){
+        console.log('changeState', event);
+      };
+      return eventum.callback(eventMachine, eventMachine['onchangestate'], event, from, to, args);
+    },
+
+    /* -------------------------------- */
+    beforeThisEvent: function(eventMachine, event, from, to, args) {
+      if ( eventum.DEBUG ){
+        console.log('beforeThisEvent', event);
+      };
+      return eventum.callback(eventMachine, eventMachine['onbefore' + event], event, from, to, args); },
+    
+    afterThisEvent:  function(eventMachine, event, from, to, args) {
+      if ( eventum.DEBUG ){
+        console.log('afterThisEvent', event);
+      };
+      return eventum.callback(eventMachine, eventMachine['onafter'  + event] || eventMachine['on' + event], event, from, to, args); },
+    
+    leaveThisState:  function(eventMachine, event, from, to, args) {
+      if ( eventum.DEBUG ){
+        console.log('leaveThisState', event);
+      };
+      return eventum.callback(eventMachine, eventMachine['onleave'  + from], event, from, to, args); },
+    
+    enterThisState:  function(eventMachine, event, from, to, args) {
+      if ( eventum.DEBUG ){
+        console.log('enterThisState', event);
+      };
+      return eventum.callback(eventMachine, eventMachine['onenter'  + to] || eventMachine['on' + to], event, from, to, args); },
+
+    beforeEvent: function(eventMachine, event, from, to, args) {
+      if ((false === eventum.beforeThisEvent(eventMachine, event, from, to, args)) ||
+          (false === eventum.beforeAnyEvent( eventMachine, event, from, to, args)))
+        return false;
+    },
+
+    afterEvent: function(eventMachine, event, from, to, args) {
+      eventum.afterThisEvent( eventMachine, event, from, to, args );
+      eventum.afterAnyEvent(  eventMachine, event, from, to, args );
+    },
+
+    enterState: function(eventMachine, event, from, to, args) {
+      eventum.enterThisState( eventMachine, event, from, to, args );
+      eventum.enterAnyState(  eventMachine, event, from, to, args );
+    },
+    leaveState: function(eventMachine, event, from, to, args) {
+      var specific = eventum.leaveThisState(eventMachine, event, from, to, args),
+          general  = eventum.leaveAnyState( eventMachine, event, from, to, args);
+      if ((false === specific) || (false === general)){
+        return false;
+      }
+      else if ((eventum.ASYNC === specific) || (eventum.ASYNC === general)){
+        return eventum.ASYNC;
+      };
+    },
+
+    debug: function(debug){
+      eventum.DEBUG = debug;
+      return eventum.DEBUG;
+    },
+
+
+    buildEvent: function(event, map) {
+      return function() {
+
+        var from  = this.current;
+        var to    = map[from] || map[eventum.ANY] || from;
+        var args  = Array.prototype.slice.call(arguments); // turn arguments into pure array
+
+        if (this.transition){
+          return this.error(
+            event, from, to, args,
+            eventum.Error.PENDING,
+            "event " + event + " inappropriate because previous transition did not complete"
+          );
         }
 
-        // console.log(' ++ next', );
-        break;
-        // this.findEvent();
+        if (this.cannot(event)){
+          return this.error(event, from, to, args, eventum.Error.INVALID, "event " + event + " inappropriate in current state " + this.current);
+        }
+
+        if (false === eventum.beforeEvent(this, event, from, to, args)){
+          return eventum.Result.CANCELLED;
+        }
+
+        if (from === to) {
+          eventum.afterEvent(this, event, from, to, args);
+          return eventum.Result.NOTRANSITION;
+        }
+
+        // prepare a transition method for use EITHER lower down, or by caller if they want an async transition (indicated by an ASYNC return value from leaveState)
+        var eventMachine = this;
+        this.transition = function() {
+          eventMachine.transition = null; // this method should only ever be called once
+          eventMachine.current = to;
+          eventum.enterState( eventMachine, event, from, to, args);
+          eventum.changeState(eventMachine, event, from, to, args);
+          eventum.afterEvent( eventMachine, event, from, to, args);
+          return eventum.Result.SUCCEEDED;
+        };
+        this.transition.cancel = function() { // provide a way for caller to cancel async transition if desired (issue #22)
+          eventMachine.transition = null;
+          eventum.afterEvent(eventMachine, event, from, to, args);
+        }
+
+        var leave = eventum.leaveState(this, event, from, to, args);
+        if (false === leave) {
+          this.transition = null;
+          return eventum.Result.CANCELLED;
+        }
+        else if (eventum.ASYNC === leave) {
+          return eventum.Result.PENDING;
+        }
+        else {
+          if (this.transition) // need to check in case user manually called transition() but forgot to return eventum.ASYNC
+            return this.transition();
+        }
+
       };
-    };
+    }
   };
 
-  this.init = function(initial){
-    
-    // проверяем конфиг
-    if ( typeof(initial) !== 'object' && !initial.hasOwnProperty('initialState') && !initial.hasOwnProperty('events') && typeof(initial.events) !== 'array' ) {
-      console.warn('wrong config');
-      return false;
-    };
-    EventumConfig = initial;
 
-    for (var i = 0; i < EventumConfig.events.length; i++) {
-      var _query = EventumConfig.events[i];
+  ////////////
+  // return //
+  ////////////
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = eventum;
+    }
+    exports.eventum = eventum;
+  }
+  else if (typeof define === 'function' && define.amd) {
+    define(function(require) { return eventum; });
+  }
+  else if (typeof window !== 'undefined') {
+    window.eventum = eventum;
+  }
+  else if (typeof self !== 'undefined') {
+    self.eventum = eventum;
+  }
 
-      EventumEvents.push({
-        name: _query.name,
-        from: _query.from,
-        to  : _query.to
-      });
-      
-      this[_query.name] = function(){ this.next() };
-    };
-
-    // проверяем начальное состояние
-    // if ( !EventumConfig.hasOwnProperty( config.initial ) ) {
-    //   console.warn('wrong initial state');
-    //   return false;
-    // };
-    EventumCurrentState = EventumConfig.initial;
-    this.findEvent();
-
-
-    // проверяем колбеки
-      // TODO
-      // onbeforeEVENT - fired before the event
-      // onleaveSTATE  - fired when leaving the old state
-      // onenterSTATE  - fired when entering the new state
-      // onafterEVENT  - fired after the event
-      // onEVENT       - convenience shorthand for onafterEVENT
-      // onSTATE       - convenience shorthand for onenterSTATE
-      // callbacks: {
-      //   onpanic:  function(event, from, to, data) { alert('panic! ' + msg);               },
-      //   onclear:  function(event, from, to, data) { alert('thanks to ' + msg);            },
-      //   ongreen:  function(event, from, to, data)      { document.body.className = 'green';    },
-      //   onyellow: function(event, from, to, data)      { document.body.className = 'yellow';   },
-      //   onred:    function(event, from, to, data)      { document.body.className = 'red';      },
-      // }
-    if ( typeof( EventumConfig.callbacks ) !== 'object' ) {
-      console.warn('callbacks are not object');
-      return false;
-    };
-    EventumCallbacks = EventumConfig.callbacks;
-    
-    // next();
-
-    // console.log( '***init', EventumConfig );
-  };
-  this.current = function(){
-
-    return EventumCurrentEvent;
-  };
-  this.list = function(name){
-    if ( !EventumConfig.hasOwnProperty(name) ) {
-      return false
-    };
-    return EventumConfig[name].to
-  };
-  this.can = function(name){
-    // if ( !EventumConfig.events.hasOwnProperty(name) ) {
-    //   return false
-    // };
-
-    for (var i = 0; i < EventumConfig.events.length; i++) {
-      var event = EventumConfig.events[i];
-      return event.to === name ? true : false;
-    };
-  };
-
-  this.init(config);
-
-};
-
-module.exports = eventum;
+}());
