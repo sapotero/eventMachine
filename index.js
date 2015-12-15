@@ -74,7 +74,7 @@
         return ( state instanceof Array ) ? ( state.indexOf(this.current) >= 0 ) : (this.current === state);
       };
       eventMachine.can = function(event) {
-        return !this.transition && ( map[event].hasOwnProperty(this.current ) || map[event].hasOwnProperty( eventum.ANY ));
+        return !!( !this.transition && map[event] &&( map[event].hasOwnProperty(this.current ) || map[event].hasOwnProperty( eventum.ANY ) ) );
       }
       eventMachine.cannot = function(event) {
         return !this.can(event);

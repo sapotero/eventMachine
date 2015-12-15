@@ -3,8 +3,8 @@ var eventum = require('./../index.js');
 var machine = eventum.init({
   initial: 'init',
   events: [
-    { event: 'login',          from: 'init',  to: 'auth'   },
-    { event: 'loginError',     from: 'init',  to: 'error'  },
+    { event: 'login',          from: 'init',  to: 'auth'  },
+    { event: 'loginError',     from: 'init',  to: 'error' },
 
     { event: 'authorize',      from: 'auth',  to: 'ready' },
     { event: 'authorizeError', from: 'auth',  to: 'error' },
@@ -12,12 +12,12 @@ var machine = eventum.init({
     { event: 'makePhoto',      from: 'ready', to: 'photo' },
     { event: 'sendPhoto',      from: 'photo', to: 'ready' },
 
-    { event: 'ping',           from: 'ready', to: 'ping' },
+    { event: 'ping',           from: 'ready', to: 'ping'  },
     { event: 'pong',           from: 'ping',  to: 'ready' },
 
     { event: 'photoError',     from: [ 'photo' ],        to: 'error' },
     { event: 'idleError',      from: [ 'error' ],        to: 'ready' },
-    { event: 'initError',      from: [ 'init', 'auth' ], to: 'init' },
+    { event: 'initError',      from: [ 'init', 'auth' ], to: 'init'  },
 
     { event: 'exit',           from: [ 'init','auth', 'check', 'ready'], to: 'init' },
   ],
