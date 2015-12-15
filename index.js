@@ -11,7 +11,7 @@
     Error: {
       INVALID : 1,
       PENDING : 2,
-      INVALID : 4 
+      IV      : 4 
     },
 
     ANY   : '*',
@@ -82,7 +82,7 @@
       eventMachine.next = function() {
         return next[this.current];
       };
-      eventMachine.Finished = function() {
+      eventMachine.finished = function() {
         return this.is(terminal);
       };
 
@@ -109,35 +109,35 @@
           return func.apply(eventMachine, [event, from, to].concat(args));
         }
         catch(e) {
-          return eventMachine.error(event, from, to, args, eventum.Error.INVALID, "an exception occurred in a caller-provided callback function", e);
+          return eventMachine.error(event, from, to, args, eventum.Error.IV, "an exception occurred in a caller-provided callback function", e);
         }
       }
     },
 
-    beforeAnyEvent:  function(eventMachine, event, from, to, args) {
+    anyEventBefore:  function(eventMachine, event, from, to, args) {
       if ( eventum.DEBUG ){
-        console.log('beforeAnyEvent', event);
+        console.log('anyEventBefore', event);
       };
       return eventum.callback(eventMachine, eventMachine['onbeforeevent'], event, from, to, args);
     },
     
-    afterAnyEvent:   function(eventMachine, event, from, to, args) {
+    anyEventAfter:   function(eventMachine, event, from, to, args) {
       if ( eventum.DEBUG ){
-        console.log('afterAnyEvent', event);
+        console.log('anyEventAfter', event);
       };
       return eventum.callback(eventMachine, eventMachine['onafterevent'] || eventMachine['onevent'], event, from, to, args);
     },
     
-    leaveAnyState:   function(eventMachine, event, from, to, args) {
+    stateLeaveAny:   function(eventMachine, event, from, to, args) {
       if ( eventum.DEBUG ){
-        console.log('leaveAnyState', event);
+        console.log('stateLeaveAny', event);
       };
       return eventum.callback(eventMachine, eventMachine['onleavestate'], event, from, to, args);
     },
     
-    enterAnyState:   function(eventMachine, event, from, to, args) {
+    stateEnterAny:   function(eventMachine, event, from, to, args) {
       if ( eventum.DEBUG ){
-        console.log('enterAnyState', event);
+        console.log('stateEnterAny', event);
       };
       return eventum.callback(eventMachine, eventMachine['onenterstate'] || eventMachine['onstate'], event, from, to, args);
     },
@@ -150,15 +150,15 @@
     },
 
     /* -------------------------------- */
-    beforeThisEvent: function(eventMachine, event, from, to, args) {
+    thisEventBefore: function(eventMachine, event, from, to, args) {
       if ( eventum.DEBUG ){
-        console.log('beforeThisEvent', event);
+        console.log('thisEventBefore', event);
       };
       return eventum.callback(eventMachine, eventMachine['onbefore' + event], event, from, to, args); },
     
-    afterThisEvent:  function(eventMachine, event, from, to, args) {
+    thisEventAfter:  function(eventMachine, event, from, to, args) {
       if ( eventum.DEBUG ){
-        console.log('afterThisEvent', event);
+        console.log('thisEventAfter', event);
       };
       return eventum.callback(eventMachine, eventMachine['onafter'  + event] || eventMachine['on' + event], event, from, to, args); },
     
@@ -175,23 +175,23 @@
       return eventum.callback(eventMachine, eventMachine['onenter'  + to] || eventMachine['on' + to], event, from, to, args); },
 
     beforeEvent: function(eventMachine, event, from, to, args) {
-      if ((false === eventum.beforeThisEvent(eventMachine, event, from, to, args)) ||
-          (false === eventum.beforeAnyEvent( eventMachine, event, from, to, args)))
+      if ((false === eventum.thisEventBefore(eventMachine, event, from, to, args)) ||
+          (false === eventum.anyEventBefore( eventMachine, event, from, to, args)))
         return false;
     },
 
     afterEvent: function(eventMachine, event, from, to, args) {
-      eventum.afterThisEvent( eventMachine, event, from, to, args );
-      eventum.afterAnyEvent(  eventMachine, event, from, to, args );
+      eventum.thisEventAfter( eventMachine, event, from, to, args );
+      eventum.anyEventAfter(  eventMachine, event, from, to, args );
     },
 
     enterState: function(eventMachine, event, from, to, args) {
       eventum.enterThisState( eventMachine, event, from, to, args );
-      eventum.enterAnyState(  eventMachine, event, from, to, args );
+      eventum.stateEnterAny(  eventMachine, event, from, to, args );
     },
     leaveState: function(eventMachine, event, from, to, args) {
       var specific = eventum.leaveThisState(eventMachine, event, from, to, args),
-          general  = eventum.leaveAnyState( eventMachine, event, from, to, args);
+          general  = eventum.stateLeaveAny( eventMachine, event, from, to, args);
       if ((false === specific) || (false === general)){
         return false;
       }
