@@ -111,9 +111,6 @@
         catch(e) {
           return eventMachine.error(event, from, to, args, eventum.Error.INVALID, "an exception occurred in a caller-provided callback function", e);
         }
-      } else {
-        console.log( 'not a function', func )
-        return false
       }
     },
 
