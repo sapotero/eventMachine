@@ -1,6 +1,6 @@
 {
   "name": "eventum-machinius",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "event machine for node",
   "main": "index.js",
   "scripts": {
