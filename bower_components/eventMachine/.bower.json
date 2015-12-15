@@ -17,12 +17,12 @@
     "test",
     "tests"
   ],
-  "version": "0.0.2",
-  "_release": "0.0.2",
+  "version": "0.0.3",
+  "_release": "0.0.3",
   "_resolution": {
     "type": "version",
-    "tag": "0.0.2",
-    "commit": "66c7121b0d3ba323c548fae05e92e71de3f12b3b"
+    "tag": "v0.0.3",
+    "commit": "6b547f6114c76fd848d1d462220fc8e1c4746beb"
   },
   "_source": "git://github.com/sapotero/eventMachine.git",
   "_target": "~0.0.2",
